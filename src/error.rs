@@ -47,6 +47,9 @@ impl std::fmt::Display for Error {
         match self {
             // Custom errors should display their own message.
             Error::Message(msg) => f.write_str(msg),
+            Error::Unsupported  => f.write_str("Unsupported data type"),
+            Error::IO           => f.write_str("IO error"),
+            Error::Overflow     => f.write_str("Integer overflow"),
         }
     }
 

@@ -1,4 +1,3 @@
-use std::borrow::BorrowMut;
 use std::io::Write;
 use serde::Serialize;
 use crate::ULEB128;
@@ -6,15 +5,6 @@ use crate::ULEB128;
 /// The main serializer struct, into which objects can be "inserted".
 pub struct Serializer<W: Write> {
     pub writer: W,
-}
-
-impl<W: Write> Serializer<W> {
-
-    /// Certain integers are stored as `ULEB128`, so they can have infinite length.
-    fn serialize_uleb128(&mut self, v: crate::types::ULEB128) -> Result<(), crate::Error> {
-        self.writer.write_all(&v.as_slice()).map_err(|_err| crate::Error::IO)
-    }
-
 }
 
 impl<W: Write> serde::ser::Serializer for &mut Serializer<W> {
@@ -25,12 +15,25 @@ impl<W: Write> serde::ser::Serializer for &mut Serializer<W> {
     /// The result of a failed serialization.
     type Error = crate::Error;
 
+    /// The type used to handle serialization of sequences' contents.
     type SerializeSeq = Self;
+
+    /// The type used to handle serialization of tuples' contents.
     type SerializeTuple = Self;
+
+    /// The type used to handle serialization of tuple `struct`s' contents.
     type SerializeTupleStruct = Self;
+
+    /// The type used to handle serialization of tuple variants' contents.
     type SerializeTupleVariant = Self;
+
+    /// The type used to handle serialization of maps' contents.
     type SerializeMap = Self;
+
+    /// The type used to handle serialization of structs' contents.
     type SerializeStruct = Self;
+
+    /// The type used to handle serialization of struct variants' contents.
     type SerializeStructVariant = Self;
 
     /// `bool`s ("Bool") are stored as a single `u8` containing either `0` or `1`.
@@ -92,16 +95,13 @@ impl<W: Write> serde::ser::Serializer for &mut Serializer<W> {
     }
 
     /// `char`s don't exist in Terraria save files.
-    fn serialize_char(self, v: char) -> Result<Self::Ok, Self::Error> {
+    fn serialize_char(self, _v: char) -> Result<Self::Ok, Self::Error> {
         Err(crate::Error::Unsupported)
     }
 
-    /// `str`s ("String") are stored in `UTF8`, with the byte length prepended as a `ULEB128`
-    /// number.
+    /// `str`s ("String") are stored as sequences of bytes.
     fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error> {
-        ULEB128::from(v.len()).serialize(self)?;
-        self.writer.write_all(v.as_bytes()).map_err(|_err| crate::Error::IO)?;
-        Ok(())
+        v.as_bytes().serialize(self)
     }
 
     /// Bytes are interpreted literally.
@@ -109,59 +109,219 @@ impl<W: Write> serde::ser::Serializer for &mut Serializer<W> {
         self.writer.write_all(v).map_err(|_err| crate::Error::IO)
     }
 
+    /// `None`s don't exist in Terraria save files.
     fn serialize_none(self) -> Result<Self::Ok, Self::Error> {
-        todo!()
+        Err(crate::Error::Unsupported)
     }
 
-    fn serialize_some<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error> where T: serde::ser::Serialize {
-        todo!()
+    /// `None`s don't exist in Terraria save files, and consequently neither do `Some`s.
+    fn serialize_some<T: ?Sized>(self, _value: &T) -> Result<Self::Ok, Self::Error> where T: serde::ser::Serialize {
+        Err(crate::Error::Unsupported)
     }
 
+    /// Units (`()`) don't exist in Terraria save files.
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
-        todo!()
+        Err(crate::Error::Unsupported)
     }
 
-    fn serialize_unit_struct(self, name: &'static str) -> Result<Self::Ok, Self::Error> {
-        todo!()
+    /// Named units don't exist in Terraria save files.
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<Self::Ok, Self::Error> {
+        Err(crate::Error::Unsupported)
     }
 
-    fn serialize_unit_variant(self, name: &'static str, variant_index: u32, variant: &'static str) -> Result<Self::Ok, Self::Error> {
-        todo!()
+    /// Variant units don't exist in Terraria save files.
+    fn serialize_unit_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str) -> Result<Self::Ok, Self::Error> {
+        Err(crate::Error::Unsupported)
     }
 
-    fn serialize_newtype_struct<T: ?Sized>(self, name: &'static str, value: &T) -> Result<Self::Ok, Self::Error> where T: serde::ser::Serialize {
-        todo!()
+    /// `struct`s should be handled by serializing their fields in order.
+    fn serialize_newtype_struct<T: ?Sized>(self, _name: &'static str, value: &T) -> Result<Self::Ok, Self::Error> where T: serde::ser::Serialize {
+        value.serialize(self)
     }
 
-    fn serialize_newtype_variant<T: ?Sized>(self, name: &'static str, variant_index: u32, variant: &'static str, value: &T) -> Result<Self::Ok, Self::Error> where T: serde::ser::Serialize {
-        todo!()
+    /// Generic `struct`s should be handled by serializing their fields in order.
+    fn serialize_newtype_variant<T: ?Sized>(self, _name: &'static str, _variant_index: u32, _variant: &'static str, value: &T) -> Result<Self::Ok, Self::Error> where T: serde::ser::Serialize {
+        value.serialize(self)
     }
 
+    /// Sequences start with a ULEB128 representation of their length, followed by their contents.
+    /// If the length of a sequence is not defined, it cannot be represented in a Terraria save file.
     fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
-        todo!()
+        match len {
+            Some(v) => ULEB128::from(v).serialize(&mut *self)?,
+            None    => Err(crate::Error::Unsupported)?,
+        }
+        Ok(self)
     }
 
-    fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple, Self::Error> {
-        todo!()
+    /// Tuples are stored as simple sequences of values.
+    fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple, Self::Error> {
+        // Nothing is prepended to the tuple on serialization!
+        Ok(self)
     }
 
-    fn serialize_tuple_struct(self, name: &'static str, len: usize) -> Result<Self::SerializeTupleStruct, Self::Error> {
-        todo!()
+    /// Tuple `struct`s are stored exactly in the same way as tuples.
+    fn serialize_tuple_struct(self, _name: &'static str, len: usize) -> Result<Self::SerializeTupleStruct, Self::Error> {
+        self.serialize_tuple(len)
     }
 
-    fn serialize_tuple_variant(self, name: &'static str, variant_index: u32, variant: &'static str, len: usize) -> Result<Self::SerializeTupleVariant, Self::Error> {
-        todo!()
+    /// Tuple variants don't exist in Terraria save files.
+    fn serialize_tuple_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str, _len: usize) -> Result<Self::SerializeTupleVariant, Self::Error> {
+        Err(crate::Error::Unsupported)
     }
 
-    fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
-        todo!()
+    /// Maps don't exist in Terraria save files.
+    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
+        Err(crate::Error::Unsupported)
     }
 
-    fn serialize_struct(self, name: &'static str, len: usize) -> Result<Self::SerializeStruct, Self::Error> {
-        todo!()
+    /// `struct`s are handled like tuples; keys are ignored.
+    fn serialize_struct(self, _name: &'static str, len: usize) -> Result<Self::SerializeStruct, Self::Error> {
+        self.serialize_tuple(len)
     }
 
-    fn serialize_struct_variant(self, name: &'static str, variant_index: u32, variant: &'static str, len: usize) -> Result<Self::SerializeStructVariant, Self::Error> {
-        todo!()
+    /// `struct` variants don't exist in Terraria save files.
+    fn serialize_struct_variant(self, _name: &'static str, _variant_index: u32, _variant: &'static str, _len: usize) -> Result<Self::SerializeStructVariant, Self::Error> {
+        Err(crate::Error::Unsupported)
+    }
+}
+
+impl<W: Write> serde::ser::SerializeSeq for &mut Serializer<W> {
+    /// The result of a successful serialization.
+    /// Since we write in a buffer, we don't have any output.
+    type Ok = ();
+
+    /// The result of a failed serialization.
+    type Error = crate::Error;
+
+    /// Sequence elements are stored like regular values.
+    fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error> where T: Serialize {
+        // I'm not sure why this is a double pointer?
+        value.serialize(&mut **self)
+    }
+
+    /// Sequences don't have an end marker in Terraria save files.
+    fn end(self) -> Result<Self::Ok, Self::Error> {
+        Ok(())
+    }
+}
+
+impl<W: Write> serde::ser::SerializeTuple for &mut Serializer<W> {
+    /// The result of a successful serialization.
+    /// Since we write in a buffer, we don't have any output.
+    type Ok = ();
+
+    /// The result of a failed serialization.
+    type Error = crate::Error;
+
+    /// Tuple elements are stored like regular values.
+    fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error> where T: Serialize {
+        // I'm not sure why this is a double pointer?
+        value.serialize(&mut **self)
+    }
+
+    /// Tuples don't have an end marker in Terraria save files.
+    fn end(self) -> Result<Self::Ok, Self::Error> {
+        Ok(())
+    }
+}
+
+impl<W: Write> serde::ser::SerializeTupleStruct for &mut Serializer<W> {
+    /// The result of a successful serialization.
+    /// Since we write in a buffer, we don't have any output.
+    type Ok = ();
+
+    /// The result of a failed serialization.
+    type Error = crate::Error;
+
+    /// Tuple `struct`s are stored exactly in the same way as tuples.
+    fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error> where T: Serialize {
+        serde::ser::SerializeTuple::serialize_element(self, value)
+    }
+
+    /// Tuple `struct`s are stored exactly in the same way as tuples.
+    fn end(self) -> Result<Self::Ok, Self::Error> {
+        serde::ser::SerializeTuple::end(self)
+    }
+}
+
+impl<W: Write> serde::ser::SerializeTupleVariant for &mut Serializer<W> {
+    /// The result of a successful serialization.
+    /// Since we write in a buffer, we don't have any output.
+    type Ok = ();
+
+    /// The result of a failed serialization.
+    type Error = crate::Error;
+
+    /// Tuple variants don't exist in Terraria save files.
+    fn serialize_field<T: ?Sized>(&mut self, _value: &T) -> Result<(), Self::Error> where T: Serialize {
+        Err(crate::Error::Unsupported)
+    }
+
+    /// Tuple variants don't exist in Terraria save files.
+    fn end(self) -> Result<Self::Ok, Self::Error> {
+        Err(crate::Error::Unsupported)
+    }
+}
+
+impl<W: Write> serde::ser::SerializeMap for &mut Serializer<W> {
+    /// The result of a successful serialization.
+    /// Since we write in a buffer, we don't have any output.
+    type Ok = ();
+
+    /// The result of a failed serialization.
+    type Error = crate::Error;
+
+    /// Maps don't exist in Terraria save files.
+    fn serialize_key<T: ?Sized>(&mut self, _key: &T) -> Result<(), Self::Error> where T: Serialize {
+        Err(crate::Error::Unsupported)
+    }
+
+    /// Maps don't exist in Terraria save files.
+    fn serialize_value<T: ?Sized>(&mut self, _value: &T) -> Result<(), Self::Error> where T: Serialize {
+        Err(crate::Error::Unsupported)
+    }
+
+    /// Maps don't exist in Terraria save files.
+    fn end(self) -> Result<Self::Ok, Self::Error> {
+        Err(crate::Error::Unsupported)
+    }
+}
+
+impl<W: Write> serde::ser::SerializeStruct for &mut Serializer<W> {
+    /// The result of a successful serialization.
+    /// Since we write in a buffer, we don't have any output.
+    type Ok = ();
+
+    /// The result of a failed serialization.
+    type Error = crate::Error;
+
+    /// `struct`s are handled like tuples; keys are ignored.
+    fn serialize_field<T: ?Sized>(&mut self, _key: &'static str, value: &T) -> Result<(), Self::Error> where T: Serialize {
+        serde::ser::SerializeTuple::serialize_element(self, value)
+    }
+
+    /// `struct`s are handled like tuples; keys are ignored.
+    fn end(self) -> Result<Self::Ok, Self::Error> {
+        serde::ser::SerializeTuple::end(self)
+    }
+}
+
+impl<W: Write> serde::ser::SerializeStructVariant for &mut Serializer<W> {
+    /// The result of a successful serialization.
+    /// Since we write in a buffer, we don't have any output.
+    type Ok = ();
+
+    /// The result of a failed serialization.
+    type Error = crate::Error;
+
+    /// `struct` variants don't exist in Terraria save files.
+    fn serialize_field<T: ?Sized>(&mut self, _key: &'static str, _value: &T) -> Result<(), Self::Error> where T: Serialize {
+        Err(crate::Error::Unsupported)
+    }
+
+    /// `struct` variants don't exist in Terraria save files.
+    fn end(self) -> Result<Self::Ok, Self::Error> {
+        Err(crate::Error::Unsupported)
     }
 }

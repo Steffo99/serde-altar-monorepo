@@ -1,22 +1,19 @@
 use serde::ser::Serialize;
-use serde::de::Deserialize;
-use serde::{Deserializer, Serializer};
+use serde::{Serializer};
 
-pub struct ULEB128 {
-    bytes: Vec<u8>
-}
+pub struct ULEB128(Vec<u8>);
 
 impl From<&[u8]> for ULEB128 {
     fn from(v: &[u8]) -> Self {
-        ULEB128 { bytes: v.to_vec() }
+        ULEB128(v.to_vec())
     }
 }
 
 impl From<u64> for ULEB128 {
-    fn from(v: u64) -> Self {
-        let mut u = ULEB128 { bytes: vec![] };
-        leb128::write::unsigned(&mut u.bytes, v);
-        u
+    fn from(value: u64) -> Self {
+        let mut vec = vec![];
+        leb128::write::unsigned(&mut vec, value).expect("Error while writing ULEB128 data to a Vec<u8>.");
+        ULEB128(vec)
     }
 }
 
@@ -36,7 +33,7 @@ impl Serialize for ULEB128 {
 
 impl ULEB128 {
     pub fn as_slice(&self) -> &[u8] {
-        self.bytes.as_slice()
+        self.0.as_slice()
     }
 
     pub fn as_u64(&self) -> crate::Result<u64> {
