@@ -8,10 +8,10 @@ pub enum Error {
     /// Tried to serialize a type that is not supported by the "altar" file type.
     Unsupported,
 
-    /// An IO error occurred while serializing a value.
+    /// An IO error occurred while (de)serializing a value.
     IO,
 
-    /// An overflow of some kind occurred while serializing a value.
+    /// An overflow of some kind occurred while (de)serializing a value.
     Overflow,
 
 }

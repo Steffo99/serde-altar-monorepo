@@ -1,6 +1,5 @@
 use std::io::Write;
 use serde::Serialize;
-use crate::ULEB128;
 
 /// The main serializer struct, into which objects can be "inserted".
 pub struct Serializer<W: Write> {
@@ -101,12 +100,12 @@ impl<W: Write> serde::ser::Serializer for &mut Serializer<W> {
 
     /// `str`s ("String") are stored as sequences of bytes.
     fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error> {
-        v.as_bytes().serialize(self)
+        v.as_bytes().to_vec().serialize(self)
     }
 
-    /// Bytes are interpreted literally.
-    fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
-        self.writer.write_all(v).map_err(|_err| crate::Error::IO)
+    /// Bytes should not exist in Terraria save files.
+    fn serialize_bytes(self, _v: &[u8]) -> Result<Self::Ok, Self::Error> {
+        Err(crate::Error::Unsupported)
     }
 
     /// `None`s don't exist in Terraria save files.
@@ -145,13 +144,16 @@ impl<W: Write> serde::ser::Serializer for &mut Serializer<W> {
     }
 
     /// Sequences start with a ULEB128 representation of their length, followed by their contents.
-    /// If the length of a sequence is not defined, it cannot be represented in a Terraria save file.
     fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
         match len {
-            Some(v) => ULEB128::from(v).serialize(&mut *self)?,
-            None    => Err(crate::Error::Unsupported)?,
+            Some(v) => {
+                let val = u64::try_from(v).map_err(|_err| crate::Error::Overflow)?;
+                leb128::write::unsigned(&mut self.writer, val).map_err(|_err| crate::Error::IO)?;
+                Ok(self)
+            },
+            // If the length of a sequence is not defined, it cannot be represented in a Terraria save file.
+            None => Err(crate::Error::Unsupported)?,
         }
-        Ok(self)
     }
 
     /// Tuples are stored as simple sequences of values.
