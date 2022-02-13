@@ -1,12 +1,9 @@
 use std::io::Read;
 use serde::de::{DeserializeSeed, Visitor};
 
+/// `Read`-based deserializer for Terraria world files.
 pub struct Deserializer<'de, R: Read> {
     pub reader: &'de mut R
-}
-
-impl<'de, R: Read> Deserializer<'de, R> {
-
 }
 
 impl<'de, R: Read> serde::de::Deserializer<'de> for &mut Deserializer<'de, R> {
@@ -96,22 +93,25 @@ impl<'de, R: Read> serde::de::Deserializer<'de> for &mut Deserializer<'de, R> {
 
     /// `str`s ("String") are stored as sequences of bytes.
     fn deserialize_str<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        // This works?
-        self.deserialize_seq(visitor)
+        self.deserialize_string(visitor)
     }
 
     /// `str`s ("String") are stored as sequences of bytes.
     fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        // This works?
-        self.deserialize_seq(visitor)
+        let size = leb128::read::unsigned(&mut self.reader).map_err(|_err| crate::Error::IO)?;
+        let size = usize::try_from(size).map_err(|_err| crate::Error::Overflow)?;
+        let mut buf: Vec<u8> = vec![0; size];
+        self.reader.read(&mut buf).map_err(|_err| crate::Error::IO)?;
+        let str = String::from_utf8(buf).map_err(|_err| crate::Error::Overflow)?;
+        visitor.visit_string(str)
     }
 
-    /// Bytes should not exist in Terraria save files.
+    /// Bytes don't exist in Terraria save files.
     fn deserialize_bytes<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
         Err(crate::Error::Unsupported)
     }
 
-    /// Bytes should not exist in Terraria save files.
+    /// Bytes don't exist in Terraria save files.
     fn deserialize_byte_buf<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
         Err(crate::Error::Unsupported)
     }
@@ -145,7 +145,7 @@ impl<'de, R: Read> serde::de::Deserializer<'de> for &mut Deserializer<'de, R> {
 
     /// Tuples are stored as simple sequences of values.
     fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        todo!()
+        visitor.visit_seq(ByteSized { de: self, size: len })
     }
 
     /// Tuple `struct`s are stored exactly in the same way as tuples.
@@ -163,16 +163,24 @@ impl<'de, R: Read> serde::de::Deserializer<'de> for &mut Deserializer<'de, R> {
         self.deserialize_tuple(fields.len(), visitor)
     }
 
-    fn deserialize_enum<V>(self, name: &'static str, variants: &'static [&'static str], visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        todo!()
+    /// `enum`s don't exist in Terraria save files.
+    fn deserialize_enum<V>(self, _name: &'static str, _variants: &'static [&'static str], _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+        Err(crate::Error::Unsupported)
     }
 
-    fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        todo!()
+    /// Identifiers don't exist in Terraria save files.
+    fn deserialize_identifier<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+        Err(crate::Error::Unsupported)
     }
 
-    fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        todo!()
+    /// With no info on what the next value is going to be, there's no way to determine it in Terraria world files.
+    fn deserialize_ignored_any<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+        Err(crate::Error::Unsupported)
+    }
+
+    /// Terraria world files are not human-readable.
+    fn is_human_readable(&self) -> bool {
+        false
     }
 }
 

@@ -1,7 +1,7 @@
 use std::io::Write;
 use serde::Serialize;
 
-/// The main serializer struct, into which objects can be "inserted".
+/// `Write`-based serializer for Terraria world files.
 pub struct Serializer<W: Write> {
     pub writer: W,
 }
@@ -103,9 +103,9 @@ impl<W: Write> serde::ser::Serializer for &mut Serializer<W> {
         v.as_bytes().to_vec().serialize(self)
     }
 
-    /// Bytes should not exist in Terraria save files.
-    fn serialize_bytes(self, _v: &[u8]) -> Result<Self::Ok, Self::Error> {
-        Err(crate::Error::Unsupported)
+    /// Bytes are stored literally.
+    fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
+        self.writer.write_all(v).map_err(|_err| crate::Error::IO)
     }
 
     /// `None`s don't exist in Terraria save files.
