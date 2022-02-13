@@ -1,9 +1,25 @@
 [package]
 name = "serde-altar"
 version = "0.1.0"
+authors = [
+    "Stefano Pigozzi <me@steffo.eu>",
+]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Serde data format for Terraria world files"
+readme = "README.md"
+repository = "https://github.com/Steffo99/serde-altar/"
+license = "MIT OR Apache-2.0"
+keywords = [
+    "serde",
+    "terraria",
+]
+categories = [
+    "encoding",
+    "games",
+]
+exclude = [
+    ".idea/",
+]
 
 [dependencies]
 serde = "1.0.136"
