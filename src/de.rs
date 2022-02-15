@@ -160,12 +160,13 @@ impl<'de, R: Read> serde::de::Deserializer<'de> for &mut Deserializer<'de, R> {
 
     /// Sequences start with a ULEB128 representation of their length, followed by their contents.
     fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        visitor.visit_seq(ByteSized { size: self.read_uleb128()?, de: self })
+        let len = u32::from_le_bytes(self.read_bytes::<4>()?) as usize;
+        visitor.visit_seq(ByteSized { size: len, de: self })
     }
 
     /// Tuples are stored as simple sequences of values.
     fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        visitor.visit_seq(ByteSized { de: self, size: len })
+        visitor.visit_seq(ByteSized { size: len, de: self })
     }
 
     /// Tuple `struct`s are stored exactly in the same way as tuples.
