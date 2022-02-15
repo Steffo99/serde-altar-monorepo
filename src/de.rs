@@ -49,9 +49,10 @@ impl<'de, R: Read> serde::de::Deserializer<'de> for &mut Deserializer<'de, R> {
         }
     }
 
-    /// `i8`s do not exist in Terraria save files.
-    fn deserialize_i8<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        Err(crate::Error::Unsupported)
+    /// `i8`s are stored in little-endian byte order.
+    fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+        let buf = self.read_bytes::<1>()?;
+        visitor.visit_i8(i8::from_le_bytes(buf))
     }
 
     /// `i16`s ("Int16") are stored in little-endian byte order.
@@ -66,30 +67,34 @@ impl<'de, R: Read> serde::de::Deserializer<'de> for &mut Deserializer<'de, R> {
         visitor.visit_i32(i32::from_le_bytes(buf))
     }
 
-    /// `i64`s do not exist in Terraria save files.
-    fn deserialize_i64<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        Err(crate::Error::Unsupported)
+    /// `i64`s are stored in little-endian byte order.
+    fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+        let buf = self.read_bytes::<8>()?;
+        visitor.visit_i64(i64::from_le_bytes(buf))
     }
 
     /// `u8`s ("Byte") are stored in little-endian byte order.
     fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
         let buf = self.read_bytes::<1>()?;
-        visitor.visit_u8(buf[0])
+        visitor.visit_u8(u8::from_le_bytes(buf))
     }
 
-    /// `u16`s don't exist in Terraria save files.
-    fn deserialize_u16<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        Err(crate::Error::Unsupported)
+    /// `u16`s are stored in little-endian byte order.
+    fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+        let buf = self.read_bytes::<2>()?;
+        visitor.visit_u16(u16::from_le_bytes(buf))
     }
 
-    /// `u32`s don't exist in Terraria save files.
-    fn deserialize_u32<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        Err(crate::Error::Unsupported)
+    /// `u32`s are stored in little-endian byte order.
+    fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+        let buf = self.read_bytes::<4>()?;
+        visitor.visit_u32(u32::from_le_bytes(buf))
     }
 
-    /// `u64`s don't exist in Terraria save files.
-    fn deserialize_u64<V>(self, _visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        Err(crate::Error::Unsupported)
+    /// `u64`s are stored in little-endian byte order.
+    fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
+        let buf = self.read_bytes::<8>()?;
+        visitor.visit_u64(u64::from_le_bytes(buf))
     }
 
     /// `f32`s ("Single") are stored in little-endian byte order.

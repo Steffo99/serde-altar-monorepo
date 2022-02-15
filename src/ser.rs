@@ -52,8 +52,8 @@ impl<W: Write> serde::ser::Serializer for &mut Serializer<W> {
     }
 
     /// `i8`s do not exist in Terraria save files.
-    fn serialize_i8(self, _v: i8) -> Result<Self::Ok, Self::Error> {
-        Err(crate::Error::Unsupported)
+    fn serialize_i8(self, v: i8) -> Result<Self::Ok, Self::Error> {
+        self.writer.write_all(&v.to_le_bytes()).map_err(|_err| crate::Error::IO)
     }
 
     /// `i16`s ("Int16") are stored in little-endian byte order.
@@ -66,29 +66,29 @@ impl<W: Write> serde::ser::Serializer for &mut Serializer<W> {
         self.writer.write_all(&v.to_le_bytes()).map_err(|_err| crate::Error::IO)
     }
 
-    /// `i64`s do not exist in Terraria save files.
-    fn serialize_i64(self, _v: i64) -> Result<Self::Ok, Self::Error> {
-        Err(crate::Error::Unsupported)
+    /// `i64`s are stored in little-endian byte order.
+    fn serialize_i64(self, v: i64) -> Result<Self::Ok, Self::Error> {
+        self.writer.write_all(&v.to_le_bytes()).map_err(|_err| crate::Error::IO)
     }
 
     /// `u8`s ("Byte") are stored in little-endian byte order.
     fn serialize_u8(self, v: u8) -> Result<Self::Ok, Self::Error> {
-        self.writer.write_all(&[v]).map_err(|_err| crate::Error::IO)
+        self.writer.write_all(&v.to_le_bytes()).map_err(|_err| crate::Error::IO)
     }
 
-    /// `u16`s don't exist in Terraria save files.
-    fn serialize_u16(self, _v: u16) -> Result<Self::Ok, Self::Error> {
-        Err(crate::Error::Unsupported)
+    /// `u16`s are stored in little-endian byte order.
+    fn serialize_u16(self, v: u16) -> Result<Self::Ok, Self::Error> {
+        self.writer.write_all(&v.to_le_bytes()).map_err(|_err| crate::Error::IO)
     }
 
-    /// `u32`s don't exist in Terraria save files.
-    fn serialize_u32(self, _v: u32) -> Result<Self::Ok, Self::Error> {
-        Err(crate::Error::Unsupported)
+    /// `u32`s are stored in little-endian byte order.
+    fn serialize_u32(self, v: u32) -> Result<Self::Ok, Self::Error> {
+        self.writer.write_all(&v.to_le_bytes()).map_err(|_err| crate::Error::IO)
     }
 
-    /// `u64`s don't exist in Terraria save files.
-    fn serialize_u64(self, _v: u64) -> Result<Self::Ok, Self::Error> {
-        Err(crate::Error::Unsupported)
+    /// `u64`s are stored in little-endian byte order.
+    fn serialize_u64(self, v: u64) -> Result<Self::Ok, Self::Error> {
+        self.writer.write_all(&v.to_le_bytes()).map_err(|_err| crate::Error::IO)
     }
 
     /// `f32`s ("Single") are stored in little-endian byte order.
