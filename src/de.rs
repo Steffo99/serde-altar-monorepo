@@ -6,6 +6,30 @@ pub struct Deserializer<'de, R: Read> {
     pub reader: &'de mut R
 }
 
+impl<'de, R: Read> Deserializer<'de, R> {
+    /// Read a ULEB128 value.
+    pub fn read_uleb128(&mut self) -> crate::Result<usize> {
+        let size = leb128::read::unsigned(&mut self.reader).map_err(|_err| crate::Error::IO)?;
+        let size = usize::try_from(size).map_err(|_err| crate::Error::Overflow)?;
+        Ok(size)
+    }
+
+    /// Read `N` bytes from the `reader`.
+    pub fn read_bytes<const N: usize>(&mut self) -> crate::Result<[u8; N]> {
+        let mut buf = [0; N];
+        self.reader.read(&mut buf).map_err(|_err| crate::Error::IO)?;
+        Ok(buf)
+    }
+
+    /// Read a ULEB128-sized `Vec` from the `reader`.
+    pub fn read_uleb128_vec(&mut self) -> crate::Result<Vec<u8>> {
+        let size = self.read_uleb128()?;
+        let mut buf = vec![0; size];
+        self.reader.read(&mut buf).map_err(|_err| crate::Error::IO)?;
+        Ok(buf)
+    }
+}
+
 impl<'de, R: Read> serde::de::Deserializer<'de> for &mut Deserializer<'de, R> {
     /// The result of a failed deserialization.
     type Error = crate::Error;
@@ -17,8 +41,7 @@ impl<'de, R: Read> serde::de::Deserializer<'de> for &mut Deserializer<'de, R> {
 
     /// `bool`s ("Bool") are stored as a single `u8` containing either `0` or `1`.
     fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        let mut buf: [u8; 1] = [0; 1];
-        self.reader.read(&mut buf).map_err(|_err| crate::Error::IO)?;
+        let buf = self.read_bytes::<1>()?;
         match buf[0] {
             0_u8 => visitor.visit_bool(false),
             1_u8 => visitor.visit_bool(true),
@@ -33,15 +56,13 @@ impl<'de, R: Read> serde::de::Deserializer<'de> for &mut Deserializer<'de, R> {
 
     /// `i16`s ("Int16") are stored in little-endian byte order.
     fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        let mut buf: [u8; 2] = [0; 2];
-        self.reader.read(&mut buf).map_err(|_err| crate::Error::IO)?;
+        let buf = self.read_bytes::<2>()?;
         visitor.visit_i16(i16::from_le_bytes(buf))
     }
 
     /// `i32`s ("Int32") are stored in little-endian byte order.
     fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        let mut buf: [u8; 4] = [0; 4];
-        self.reader.read(&mut buf).map_err(|_err| crate::Error::IO)?;
+        let buf = self.read_bytes::<4>()?;
         visitor.visit_i32(i32::from_le_bytes(buf))
     }
 
@@ -52,8 +73,7 @@ impl<'de, R: Read> serde::de::Deserializer<'de> for &mut Deserializer<'de, R> {
 
     /// `u8`s ("Byte") are stored in little-endian byte order.
     fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        let mut buf: [u8; 1] = [0; 1];
-        self.reader.read(&mut buf).map_err(|_err| crate::Error::IO)?;
+        let buf = self.read_bytes::<1>()?;
         visitor.visit_u8(buf[0])
     }
 
@@ -98,11 +118,8 @@ impl<'de, R: Read> serde::de::Deserializer<'de> for &mut Deserializer<'de, R> {
 
     /// `str`s ("String") are stored as sequences of bytes.
     fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        let size = leb128::read::unsigned(&mut self.reader).map_err(|_err| crate::Error::IO)?;
-        let size = usize::try_from(size).map_err(|_err| crate::Error::Overflow)?;
-        let mut buf: Vec<u8> = vec![0; size];
-        self.reader.read(&mut buf).map_err(|_err| crate::Error::IO)?;
-        let str = String::from_utf8(buf).map_err(|_err| crate::Error::Overflow)?;
+        let bytes = self.read_uleb128_vec()?;
+        let str = String::from_utf8(bytes).map_err(|_err| crate::Error::Overflow)?;
         visitor.visit_string(str)
     }
 
@@ -138,9 +155,7 @@ impl<'de, R: Read> serde::de::Deserializer<'de> for &mut Deserializer<'de, R> {
 
     /// Sequences start with a ULEB128 representation of their length, followed by their contents.
     fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error> where V: Visitor<'de> {
-        let size = leb128::read::unsigned(&mut self.reader).map_err(|_err| crate::Error::IO)?;
-        let size = usize::try_from(size).map_err(|_err| crate::Error::Overflow)?;
-        visitor.visit_seq(ByteSized { de: self, size })
+        visitor.visit_seq(ByteSized { size: self.read_uleb128()?, de: self })
     }
 
     /// Tuples are stored as simple sequences of values.

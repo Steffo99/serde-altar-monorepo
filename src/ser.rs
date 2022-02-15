@@ -6,6 +6,14 @@ pub struct Serializer<W: Write> {
     pub writer: W,
 }
 
+impl<W: Write> Serializer<W> {
+    /// Write a ULEB128 value.
+    pub fn write_uleb128<T: Into<u64>>(&mut self, val: T) -> crate::Result<()> {
+        leb128::write::unsigned(&mut self.writer, val.into()).map_err(|_err| crate::Error::IO)?;
+        Ok(())
+    }
+}
+
 impl<W: Write> serde::ser::Serializer for &mut Serializer<W> {
     /// The result of a successful serialization.
     /// Since we write in a buffer, we don't have any output.
@@ -147,8 +155,7 @@ impl<W: Write> serde::ser::Serializer for &mut Serializer<W> {
     fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
         match len {
             Some(v) => {
-                let val = u64::try_from(v).map_err(|_err| crate::Error::Overflow)?;
-                leb128::write::unsigned(&mut self.writer, val).map_err(|_err| crate::Error::IO)?;
+                self.write_uleb128(v as u64)?;
                 Ok(self)
             },
             // If the length of a sequence is not defined, it cannot be represented in a Terraria save file.
