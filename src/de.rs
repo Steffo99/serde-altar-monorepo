@@ -1,9 +1,10 @@
 use std::io::Read;
 use serde::de::{DeserializeSeed, Visitor};
+use serde::Deserialize;
 
 /// `Read`-based deserializer for Terraria world files.
 pub struct Deserializer<'de, R: Read> {
-    pub reader: &'de mut R
+    reader: &'de mut R
 }
 
 impl<'de, R: Read> Deserializer<'de, R> {
@@ -224,4 +225,10 @@ impl<'a, 'de, R: Read> serde::de::SeqAccess<'de> for ByteSized<'a, 'de, R> {
     fn size_hint(&self) -> Option<usize> {
         Some(self.size)
     }
+}
+
+pub fn from_reader<'de, R: Read, T>(reader: &'de mut R) -> crate::Result<T> where T: Deserialize<'de> {
+    let mut de = Deserializer { reader };
+    let t = T::deserialize(&mut de)?;
+    Ok(t)
 }

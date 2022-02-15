@@ -3,7 +3,7 @@ use serde::Serialize;
 
 /// `Write`-based serializer for Terraria world files.
 pub struct Serializer<W: Write> {
-    pub writer: W,
+    writer: W,
 }
 
 impl<W: Write> Serializer<W> {
@@ -337,4 +337,10 @@ impl<W: Write> serde::ser::SerializeStructVariant for &mut Serializer<W> {
     fn end(self) -> Result<Self::Ok, Self::Error> {
         Err(crate::Error::Unsupported)
     }
+}
+
+pub fn to_writer<W: Write, T>(writer: W, value: T) -> crate::Result<W> where T: Serialize {
+    let mut ser = Serializer { writer };
+    value.serialize(&mut ser)?;
+    Ok(ser.writer)
 }
