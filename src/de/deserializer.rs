@@ -22,7 +22,6 @@ pub struct ReadDeserializer<'de, R> where R: std::io::Read {
     pub(crate) reader: &'de mut R
 }
 
-/// Implementation of utility functions for easier deserializing.
 impl<'de, R> ReadDeserializer<'de, R> where R: std::io::Read {
     /// Read a ULEB128 value.
     pub fn read_uleb128(&mut self) -> crate::Result<usize> {

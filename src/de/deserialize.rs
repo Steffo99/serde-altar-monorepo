@@ -7,6 +7,7 @@ use crate::VecI16;
 use crate::VecI32;
 
 
+/// Custom deserialize trait with support for the weird Terraria array serialization.
 pub trait Deserialize<'de, T> : serde::de::Deserialize<'de> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: crate::de::Deserializer<'de>, T: crate::de::Deserialize<'de, T>;
 }
@@ -22,7 +23,6 @@ impl<'de> Deserialize<'de, bool> for VecI16Flags {
         deserializer.deserialize_vec_i16flags(crate::de::visitor::VecI16FlagsVisitor)
     }
 }
-
 
 impl<'de, T> serde::Deserialize<'de> for VecULEB128<T> {
     fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {

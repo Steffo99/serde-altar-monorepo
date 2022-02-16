@@ -1,3 +1,4 @@
+/// Sequence having a known number of values inside.
 pub struct ValueSized<'a, 'de: 'a, R> where R: std::io::Read {
     pub de: &'a mut crate::de::ReadDeserializer<'de, R>,
     pub size: usize,

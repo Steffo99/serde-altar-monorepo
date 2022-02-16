@@ -5,10 +5,13 @@ use crate::VecULEB128;
 use crate::VecI16;
 use crate::VecI32;
 
-
+/// Visitor for [VecI16Flags], containing `bool`s.
 pub struct VecI16FlagsVisitor;
+/// Visitor for [VecULEB128], containing `T`s.
 pub struct VecULEB128Visitor<T> (pub std::marker::PhantomData<T>);
+/// Visitor for [VecI16], containing `T`s.
 pub struct VecI16Visitor<T> (pub std::marker::PhantomData<T>);
+/// Visitor for [VecULEB128], containing `T`s.
 pub struct VecI32Visitor<T> (pub std::marker::PhantomData<T>);
 
 
