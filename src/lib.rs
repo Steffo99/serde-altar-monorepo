@@ -4,9 +4,11 @@ mod ser;
 mod de;
 
 pub use ser::WriteSerializer;
+pub use ser::Serialize;
 pub use ser::to_writer;
 
 pub use de::ReadDeserializer;
+pub use de::Deserialize;
 pub use de::from_reader;
 
 pub use error::Error;
