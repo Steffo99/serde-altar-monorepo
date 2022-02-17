@@ -1,9 +1,9 @@
-mod ser;
 mod error;
 mod vec;
+mod ser;
 mod de;
 
-pub use ser::Serializer;
+pub use ser::WriteSerializer;
 pub use ser::to_writer;
 
 pub use de::ReadDeserializer;
