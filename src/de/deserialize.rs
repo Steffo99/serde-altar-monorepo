@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 use serde::de::Error;
-use serde::Deserializer;
 use crate::VecI16Flags;
 use crate::VecULEB128;
 use crate::VecI16;
@@ -13,7 +12,7 @@ pub trait Deserialize<'de, T> : serde::de::Deserialize<'de> {
 }
 
 impl<'de> serde::Deserialize<'de> for VecI16Flags {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: serde::de::Deserializer<'de> {
         Err(D::Error::custom("Cannot deserialize VecI16Flags with the serde Deserializer"))
     }
 }
@@ -25,7 +24,7 @@ impl<'de> Deserialize<'de, bool> for VecI16Flags {
 }
 
 impl<'de, T> serde::Deserialize<'de> for VecULEB128<T> {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: serde::de::Deserializer<'de> {
         Err(D::Error::custom("Cannot deserialize VecULEB128 with the serde Deserializer"))
     }
 }
@@ -37,7 +36,7 @@ impl<'de, T> Deserialize<'de, T> for VecULEB128<T> {
 }
 
 impl<'de, T> serde::Deserialize<'de> for VecI16<T> {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: serde::de::Deserializer<'de> {
         Err(D::Error::custom("Cannot deserialize VecI16 with the serde Deserializer"))
     }
 }
@@ -49,7 +48,7 @@ impl<'de, T> Deserialize<'de, T> for VecI16<T> {
 }
 
 impl<'de, T> serde::Deserialize<'de> for VecI32<T> {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error> where D: serde::de::Deserializer<'de> {
         Err(D::Error::custom("Cannot deserialize VecI32 with the serde Deserializer"))
     }
 }

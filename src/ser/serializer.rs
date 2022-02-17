@@ -1,15 +1,9 @@
-use crate::VecI16Flags;
-use crate::VecULEB128;
-use crate::VecI16;
-use crate::VecI32;
-
-
 /// Custom serializer trait with support for the weird Terraria array serialization.
 pub trait Serializer : serde::ser::Serializer {
-    fn serialize_vec_i16flags(self, v: VecI16Flags) -> Result<Self::Ok, Self::Error>;
-    fn serialize_vec_uleb128<T>(self, v: VecULEB128<T>) -> Result<Self::Ok, Self::Error>;
-    fn serialize_vec_i16<T>(self, v: VecI16<T>) -> Result<Self::Ok, Self::Error>;
-    fn serialize_vec_i32<T>(self, v: VecI32<T>) -> Result<Self::Ok, Self::Error>;
+    fn serialize_vec_i16flags(self, len: i16) -> Result<Self::SerializeSeq, Self::Error>;
+    fn serialize_vec_uleb128(self, len: usize) -> Result<Self::SerializeSeq, Self::Error>;
+    fn serialize_vec_i16(self, len: i16) -> Result<Self::SerializeSeq, Self::Error>;
+    fn serialize_vec_i32(self, len: i32) -> Result<Self::SerializeSeq, Self::Error>;
 }
 
 
@@ -214,20 +208,24 @@ impl<W> serde::ser::Serializer for &mut WriteSerializer<W> where W: std::io::Wri
 }
 
 impl<W> Serializer for &mut WriteSerializer<W> where W: std::io::Write {
-    fn serialize_vec_i16flags(self, v: VecI16Flags) -> Result<Self::Ok, Self::Error> {
-        todo!()
+    fn serialize_vec_i16flags(self, len: i16) -> Result<Self::SerializeSeq, Self::Error> {
+        self.writer.write(&len.to_le_bytes()).map_err(|_err| crate::Error::IO)?;
+        Ok(self)
     }
 
-    fn serialize_vec_uleb128<T>(self, v: VecULEB128<T>) -> Result<Self::Ok, Self::Error> {
-        todo!()
+    fn serialize_vec_uleb128(self, len: usize) -> Result<Self::SerializeSeq, Self::Error> {
+        self.writer.write(&len.to_le_bytes()).map_err(|_err| crate::Error::IO)?;
+        Ok(self)
     }
 
-    fn serialize_vec_i16<T>(self, v: VecI16<T>) -> Result<Self::Ok, Self::Error> {
-        todo!()
+    fn serialize_vec_i16(self, len: i16) -> Result<Self::SerializeSeq, Self::Error> {
+        self.writer.write(&len.to_le_bytes()).map_err(|_err| crate::Error::IO)?;
+        Ok(self)
     }
 
-    fn serialize_vec_i32<T>(self, v: VecI32<T>) -> Result<Self::Ok, Self::Error> {
-        todo!()
+    fn serialize_vec_i32(self, len: i32) -> Result<Self::SerializeSeq, Self::Error> {
+        self.writer.write(&len.to_le_bytes()).map_err(|_err| crate::Error::IO)?;
+        Ok(self)
     }
 }
 
@@ -239,14 +237,15 @@ impl<W> serde::ser::SerializeSeq for &mut WriteSerializer<W> where W: std::io::W
     // The result of a failed serialization.
     type Error = crate::Error;
 
-    fn serialize_element<T: ?Sized>(&mut self, _value: &T) -> Result<(), Self::Error> where T: serde::ser::Serialize {
-        // Generic sequences should not be used in `serde-altar`; sized Vecs are available, though.
-        Err(crate::Error::Unsupported)
+    fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error> where T: serde::ser::Serialize {
+        // Sequence elements are stored like regular values.
+        // I'm not sure why this is a double pointer?
+        value.serialize(&mut **self)
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
-        // Generic sequences should not be used in `serde-altar`; sized Vecs are available, though.
-        Err(crate::Error::Unsupported)
+        // Sequences don't have an end marker in Terraria save files.
+        Ok(())
     }
 }
 
