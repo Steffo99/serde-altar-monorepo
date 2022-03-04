@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/serde-altar.iml" filepath="$PROJECT_DIR$/.idea/serde-altar.iml" />
+      <module fileurl="file://$PROJECT_DIR$/serde-altar/serde-altar.iml" filepath="$PROJECT_DIR$/serde-altar/serde-altar.iml" />
+      <module fileurl="file://$PROJECT_DIR$/serde-altar-derive/serde-altar-derive.iml" filepath="$PROJECT_DIR$/serde-altar-derive/serde-altar-derive.iml" />
+      <module fileurl="file://$PROJECT_DIR$/serde-altar-monorepo.iml" filepath="$PROJECT_DIR$/serde-altar-monorepo.iml" />
     </modules>
   </component>
 </project>
